@@ -10,3 +10,9 @@ queue:
       name: Loket B
     - id: C
       name: Loket C
+
+printer:
+  ticket:
+    enabled: true
+    institution-name: "Nama Instansi"
+    address: "Jalan Contoh No. 123, Kota"

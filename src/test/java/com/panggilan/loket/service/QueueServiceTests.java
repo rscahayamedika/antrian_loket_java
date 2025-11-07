@@ -28,7 +28,7 @@ class QueueServiceTests {
         definitionC.setId("C");
         definitionC.setName("Loket C");
         properties.setCounters(List.of(definitionA, definitionB, definitionC));
-        queueService = new QueueService(properties);
+    queueService = new QueueService(properties, TicketPrinter.noop());
         queueService.initializeCounters();
     }
 

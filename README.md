@@ -9,6 +9,7 @@ Aplikasi antrean loket berbasis Java Spring Boot dengan antarmuka web dan dukung
 - Panggilan antrean berikutnya dan panggilan ulang dengan suara otomatis.
 - Penomoran antrean otomatis direset setiap pukul 00.00 setiap hari.
 - Tampilan web responsif untuk memonitor nomor berjalan dan antrean tersisa.
+- Cetak tiket otomatis berisi nama instansi, nomor antrean, dan alamat pada setiap penerbitan nomor.
 - REST API sederhana untuk integrasi lanjutan.
 
 ## Teknologi
@@ -49,6 +50,20 @@ Setiap loket dapat menggunakan aplikasi desktop ringan untuk melakukan panggilan
 
 3. Masukkan URL server (`http://alamat-server:8080`) dan ID loket pada form aplikasi, kemudian gunakan tombol **Panggil Berikutnya**, **Panggil Ulang**, dan **Selesaikan** sesuai operasional loket.
 4. Pengguna Windows dapat menjalankan `run-desktop-client.bat` untuk meluncurkan aplikasi dengan wizard input URL dan ID loket.
+
+### Konfigurasi Cetak Tiket
+
+Atur nama instansi dan alamat yang tercetak melalui `src/main/resources/application.yml`:
+
+```yaml
+printer:
+   ticket:
+      enabled: true
+      institution-name: "Klinik Sehat Sentosa"
+      address: "Jalan Contoh No. 123, Kota"
+```
+
+Pastikan printer default pada sistem telah terpasang; aplikasi akan melewati pencetakan jika tidak menemukan printer.
 
 #### Cara Mengoperasikan Klien Desktop
 

@@ -4,6 +4,7 @@ import com.panggilan.loket.config.CounterProperties;
 import com.panggilan.loket.model.CounterSnapshot;
 import com.panggilan.loket.model.QueueStatus;
 import com.panggilan.loket.model.Ticket;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,26 +19,33 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 @Service
 public class QueueService {
 
+    private static final Logger log = LoggerFactory.getLogger(QueueService.class);
+
     private final CounterProperties counterProperties;
     private final Clock clock;
+    private final TicketPrinter ticketPrinter;
     private final Map<String, CounterState> counters = new ConcurrentHashMap<>();
     private final Map<String, Deque<Ticket>> waitingByCounter = new ConcurrentHashMap<>();
     private final AtomicInteger ticketSequence = new AtomicInteger();
     private final CopyOnWriteArrayList<String> counterOrder = new CopyOnWriteArrayList<>();
     private volatile LocalDate lastResetDate;
 
-    public QueueService(CounterProperties counterProperties) {
-        this(counterProperties, Clock.systemDefaultZone());
+    @Autowired
+    public QueueService(CounterProperties counterProperties, TicketPrinter ticketPrinter) {
+        this(counterProperties, ticketPrinter, Clock.systemDefaultZone());
     }
 
-    QueueService(CounterProperties counterProperties, Clock clock) {
+    QueueService(CounterProperties counterProperties, TicketPrinter ticketPrinter, Clock clock) {
         this.counterProperties = counterProperties;
+        this.ticketPrinter = ticketPrinter == null ? TicketPrinter.noop() : ticketPrinter;
         this.clock = clock;
         this.lastResetDate = LocalDate.now(clock);
     }
@@ -85,6 +93,11 @@ public class QueueService {
         String ticketNumber = String.format("Q-%03d", nextSequence);
         Ticket ticket = Ticket.create(ticketNumber);
         waitingByCounter.get(firstCounterId).addLast(ticket);
+        try {
+            ticketPrinter.printTicket(ticket);
+        } catch (Exception ex) {
+            log.warn("Gagal memicu cetak tiket {}: {}", ticket.getNumber(), ex.getMessage());
+        }
         return ticket;
     }
 

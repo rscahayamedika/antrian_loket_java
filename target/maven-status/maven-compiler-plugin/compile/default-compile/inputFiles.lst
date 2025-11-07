@@ -1,7 +1,10 @@
 C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\dto\CreateCounterRequest.java
 C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\service\QueueService.java
+C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\service\TicketPrinter.java
+C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\config\TicketPrintProperties.java
 C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\controller\CounterController.java
 C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\model\Ticket.java
+C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\service\DefaultTicketPrinter.java
 C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\config\CounterProperties.java
 C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\model\CounterSnapshot.java
 C:\xampp\htdocs\panggilan\src\main\java\com\panggilan\loket\PanggilanLoketApplication.java
