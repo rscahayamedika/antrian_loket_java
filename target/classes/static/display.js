@@ -6,6 +6,7 @@ const lastCallCounterElement = document.getElementById("last-call-counter");
 
 let refreshTimer;
 let lastDisplayedKey = null;
+const speechSupported = "speechSynthesis" in window;
 
 async function refreshDisplay() {
     try {
@@ -100,10 +101,32 @@ function updateLastCall(counters) {
     lastDisplayedKey = latest.key;
     lastCallNumberElement.textContent = latest.number;
     lastCallCounterElement.textContent = latest.counterName;
+    announceTicket(latest.number, latest.counterName);
 }
 
 function formatTicketNumber(sequence) {
     return `Q-${String(sequence).padStart(3, "0")}`;
+}
+
+function announceTicket(ticketNumber, counterName) {
+    if (!speechSupported || !ticketNumber || !counterName) {
+        return;
+    }
+    const sentence = `Nomor antrean ${spellTicket(ticketNumber)} menuju ${counterName}`;
+    const utterance = new SpeechSynthesisUtterance(sentence);
+    utterance.lang = "id-ID";
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+}
+
+function spellTicket(ticketNumber) {
+    const parts = ticketNumber.split("-");
+    if (parts.length !== 2) {
+        return ticketNumber;
+    }
+    const prefix = parts[0].split("").join(" ");
+    const digits = parts[1].split("").join(" ");
+    return `${prefix}, ${digits}`;
 }
 
 window.addEventListener("load", () => {

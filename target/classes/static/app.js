@@ -5,7 +5,6 @@ const queueLengthElement = document.getElementById("queue-length");
 const feedbackElement = document.getElementById("feedback");
 const counterForm = document.getElementById("counter-form");
 
-const voiceEnabled = "speechSynthesis" in window;
 let refreshTimer;
 
 async function loadStatus() {
@@ -25,7 +24,7 @@ async function loadStatus() {
         const counters = await countersResponse.json();
         const queueStatus = await queueResponse.json();
 
-    renderCounters(counters);
+        renderCounters(counters);
         renderQueue(queueStatus.waitingQueue);
         updateNextNumber(queueStatus.nextTicketNumber);
     } catch (error) {
@@ -131,7 +130,6 @@ async function handleCounterAction(event) {
             showFeedback(`Loket ${counterId} selesai melayani nomor saat ini.`);
         } else {
             const ticket = await response.json();
-            announceTicket(ticket, action === "recall");
             const verb = action === "recall" ? "Panggilan ulang" : "Memanggil";
             showFeedback(`${verb} nomor ${ticket.number} ke ${ticket.counterName}.`);
         }
@@ -141,27 +139,6 @@ async function handleCounterAction(event) {
     } finally {
         await loadStatus();
     }
-}
-
-function announceTicket(ticket, isRecall = false) {
-    if (!voiceEnabled || !ticket) {
-        return;
-    }
-    const sentence = `${isRecall ? "Panggilan ulang untuk" : "Nomor antrean"} ${spellTicket(ticket.number)} menuju ${ticket.counterName}`;
-    const utterance = new SpeechSynthesisUtterance(sentence);
-    utterance.lang = "id-ID";
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-}
-
-function spellTicket(ticketNumber) {
-    const parts = ticketNumber.split("-");
-    if (parts.length !== 2) {
-        return ticketNumber;
-    }
-    const prefix = parts[0].split("").join(" ");
-    const digits = parts[1].split("").join(" ");
-    return `${prefix}, ${digits}`;
 }
 
 function formatTicketNumber(sequence) {
@@ -209,9 +186,6 @@ function showFeedback(message, isError = false) {
 
 window.addEventListener("load", () => {
     loadStatus();
-    if (!voiceEnabled) {
-        showFeedback("Browser Anda tidak mendukung Web Speech API. Fitur suara dinonaktifkan.", true);
-    }
     refreshTimer = setInterval(loadStatus, 5000);
 });
 
