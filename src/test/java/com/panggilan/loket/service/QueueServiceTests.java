@@ -2,6 +2,8 @@ package com.panggilan.loket.service;
 
 import com.panggilan.loket.config.CounterProperties;
 import com.panggilan.loket.model.Ticket;
+import java.lang.reflect.Field;
+import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,5 +77,22 @@ class QueueServiceTests {
         Ticket recall = queueService.recall("A").orElseThrow();
 
         assertThat(recall.getId()).isEqualTo(assigned.getId());
+    }
+
+    @Test
+    void ticketSequenceResetsAtMidnight() throws Exception {
+        queueService.issueTicket();
+        queueService.issueTicket();
+        assertThat(queueService.previewNextTicketNumber()).isEqualTo(3);
+
+        Field lastResetField = QueueService.class.getDeclaredField("lastResetDate");
+        lastResetField.setAccessible(true);
+        lastResetField.set(queueService, LocalDate.now().minusDays(1));
+
+        Ticket ticketAfterReset = queueService.issueTicket();
+
+        assertThat(ticketAfterReset.getNumber()).isEqualTo("Q-001");
+        assertThat(queueService.getWaitingQueue()).hasSize(1);
+        assertThat(queueService.previewNextTicketNumber()).isEqualTo(2);
     }
 }

@@ -7,6 +7,7 @@ Aplikasi antrean loket berbasis Java Spring Boot dengan antarmuka web dan dukung
 - Manajemen loket dinamis: tambah loket baru kapan saja.
 - Tiket diterbitkan satu kali dan bergerak berantai antar loket sesuai urutan (mis. Loket A → B → C).
 - Panggilan antrean berikutnya dan panggilan ulang dengan suara otomatis.
+- Penomoran antrean otomatis direset setiap pukul 00.00 setiap hari.
 - Tampilan web responsif untuk memonitor nomor berjalan dan antrean tersisa.
 - REST API sederhana untuk integrasi lanjutan.
 
@@ -27,6 +28,36 @@ Aplikasi antrean loket berbasis Java Spring Boot dengan antarmuka web dan dukung
    ```
 
 3. Akses antarmuka web melalui `http://localhost:8080`.
+
+### Klien Desktop Loket
+
+Setiap loket dapat menggunakan aplikasi desktop ringan untuk melakukan panggilan:
+
+1. Bangun paket desktop:
+
+   ```cmd
+   mvn -f desktop-client/pom.xml clean package
+   ```
+
+   Artefak akan tersedia di `desktop-client/target/counter-desktop-client-0.1.0-SNAPSHOT-jar-with-dependencies.jar`.
+
+2. Jalankan aplikasi (ganti `<loket>` dengan ID loket, mis. `A`):
+
+   ```cmd
+   java -jar desktop-client/target/counter-desktop-client-0.1.0-SNAPSHOT-jar-with-dependencies.jar
+   ```
+
+3. Masukkan URL server (`http://alamat-server:8080`) dan ID loket pada form aplikasi, kemudian gunakan tombol **Panggil Berikutnya**, **Panggil Ulang**, dan **Selesaikan** sesuai operasional loket.
+4. Pengguna Windows dapat menjalankan `run-desktop-client.bat` untuk meluncurkan aplikasi dengan wizard input URL dan ID loket.
+
+#### Cara Mengoperasikan Klien Desktop
+
+- **Pilih Loket & Server**: masukkan URL backend (contoh `http://localhost:8080`) dan ID loket (`A`, `B`, `C`, dll.), lalu simpan. Pengaturan tersimpan selama aplikasi berjalan.
+- **Panggil Berikutnya**: mengambil nomor antrean siap untuk loket tersebut. Jika belum ada nomor yang menunggu, tombol akan nonaktif otomatis.
+- **Panggil Ulang**: memutar kembali nomor terakhir yang dipanggil oleh loket untuk memastikan pemanggilan terdengar jelas di area tunggu.
+- **Selesaikan**: menandai layanan selesai sehingga nomor berpindah ke loket berikutnya (atau selesai sepenuhnya bila loket terakhir).
+- **Pembaruan Status**: panel status di bagian kiri menampilkan nomor aktif dan estimasi antrean; data diperbarui otomatis setiap beberapa detik.
+- **Gangguan Koneksi**: jika koneksi backend terputus, aplikasi menampilkan peringatan; periksa jaringan dan tekan kembali tombol sesuai kebutuhan setelah koneksi normal.
 
 ## Struktur API
 

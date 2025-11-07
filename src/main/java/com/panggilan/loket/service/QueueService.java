@@ -4,6 +4,8 @@ import com.panggilan.loket.config.CounterProperties;
 import com.panggilan.loket.model.CounterSnapshot;
 import com.panggilan.loket.model.QueueStatus;
 import com.panggilan.loket.model.Ticket;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Deque;
 import java.util.List;
@@ -23,13 +25,21 @@ import org.springframework.util.Assert;
 public class QueueService {
 
     private final CounterProperties counterProperties;
+    private final Clock clock;
     private final Map<String, CounterState> counters = new ConcurrentHashMap<>();
     private final Map<String, Deque<Ticket>> waitingByCounter = new ConcurrentHashMap<>();
     private final AtomicInteger ticketSequence = new AtomicInteger();
     private final CopyOnWriteArrayList<String> counterOrder = new CopyOnWriteArrayList<>();
+    private volatile LocalDate lastResetDate;
 
     public QueueService(CounterProperties counterProperties) {
+        this(counterProperties, Clock.systemDefaultZone());
+    }
+
+    QueueService(CounterProperties counterProperties, Clock clock) {
         this.counterProperties = counterProperties;
+        this.clock = clock;
+        this.lastResetDate = LocalDate.now(clock);
     }
 
     @PostConstruct
@@ -44,6 +54,7 @@ public class QueueService {
     }
 
     public List<CounterSnapshot> getSnapshot() {
+        ensureDailyResetIfNeeded();
         int nextNumber = previewNextTicketNumber();
         return counterOrder.stream()
                 .map(counters::get)
@@ -57,6 +68,7 @@ public class QueueService {
     }
 
     public synchronized CounterSnapshot createCounter(String id, String name) {
+        ensureDailyResetIfNeeded();
         Assert.hasText(id, "Counter id is required");
         Assert.hasText(name, "Counter name is required");
         CounterState state = registerCounter(id, name);
@@ -66,6 +78,7 @@ public class QueueService {
     }
 
     public synchronized Ticket issueTicket() {
+        ensureDailyResetIfNeeded();
         String firstCounterId = firstCounterId();
         Assert.state(firstCounterId != null, "Tidak ada loket terdaftar");
         int nextSequence = ticketSequence.incrementAndGet();
@@ -76,6 +89,7 @@ public class QueueService {
     }
 
     public synchronized Optional<Ticket> callNext(String counterId) {
+        ensureDailyResetIfNeeded();
         CounterState counter = requireCounter(counterId);
         if (counter.current != null) {
             throw new IllegalStateException(
@@ -96,6 +110,7 @@ public class QueueService {
     }
 
     public synchronized Optional<Ticket> callNextFirstCounter() {
+        ensureDailyResetIfNeeded();
         String firstCounterId = firstCounterId();
         if (firstCounterId == null) {
             return Optional.empty();
@@ -104,6 +119,7 @@ public class QueueService {
     }
 
     public Optional<Ticket> recall(String counterId) {
+        ensureDailyResetIfNeeded();
         CounterState counter = requireCounter(counterId);
         Ticket current = counter.current;
         if (current != null) {
@@ -113,6 +129,7 @@ public class QueueService {
     }
 
     public synchronized void complete(String counterId) {
+        ensureDailyResetIfNeeded();
         CounterState counter = requireCounter(counterId);
         Ticket current = counter.current;
         if (current == null) {
@@ -126,6 +143,7 @@ public class QueueService {
     }
 
     public List<Ticket> getWaitingQueue() {
+        ensureDailyResetIfNeeded();
         String firstCounterId = firstCounterId();
         if (firstCounterId == null) {
             return List.of();
@@ -138,11 +156,32 @@ public class QueueService {
     }
 
     public int previewNextTicketNumber() {
+        ensureDailyResetIfNeeded();
         return ticketSequence.get() + 1;
     }
 
     public QueueStatus getQueueStatus() {
+        ensureDailyResetIfNeeded();
         return new QueueStatus(getWaitingQueue(), previewNextTicketNumber());
+    }
+
+    private void ensureDailyResetIfNeeded() {
+        LocalDate today = LocalDate.now(clock);
+        if (today.equals(lastResetDate)) {
+            return;
+        }
+        synchronized (this) {
+            if (today.equals(lastResetDate)) {
+                return;
+            }
+            ticketSequence.set(0);
+            waitingByCounter.values().forEach(Deque::clear);
+            counters.values().forEach(state -> {
+                state.current = null;
+                state.lastCalledAt = null;
+            });
+            lastResetDate = today;
+        }
     }
 
     private synchronized CounterState registerCounter(String id, String name) {
