@@ -270,6 +270,29 @@ footer {
     gap: 2rem;
 }
 
+.audio-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+}
+
+.audio-banner button {
+    background: #22c55e;
+    color: #0f172a;
+}
+
+.audio-banner button:hover {
+    background: #16a34a;
+}
+
+.audio-status {
+    font-size: 0.95rem;
+}
+
 .highlight {
     background: #1e293b;
     border-radius: 1rem;

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengaturan Instansi - Panggilan Loket</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+    <h1>Pengaturan Instansi</h1>
+    <p>Sesuaikan nama instansi dan alamat yang akan tercetak pada tiket antrean.</p>
+</header>
+<main>
+    <section class="controls">
+        <div class="control-card">
+            <form id="print-settings-form">
+                <label for="institution-name">Nama Instansi</label>
+                <input id="institution-name" name="institutionName" maxlength="120" required>
+
+                <label for="institution-address">Alamat Instansi</label>
+                <textarea id="institution-address" name="address" rows="4" maxlength="240" required></textarea>
+
+                <button type="submit">Simpan Perubahan</button>
+            </form>
+            <p id="settings-feedback" class="feedback hidden"></p>
+        </div>
+    </section>
+    <section>
+        <a class="back-link" href="index.html">&larr; Kembali ke Dashboard</a>
+    </section>
+</main>
+<footer>
+    <small>&copy; 2025 Sistem Panggilan Loket</small>
+</footer>
+
+<script src="settings.js" type="module"></script>
+</body>
+</html>

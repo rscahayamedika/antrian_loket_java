@@ -3,10 +3,14 @@ const queueElement = document.getElementById("display-queue");
 const nextNumberElement = document.getElementById("display-next-number");
 const lastCallNumberElement = document.getElementById("last-call-number");
 const lastCallCounterElement = document.getElementById("last-call-counter");
+const audioBannerElement = document.getElementById("audio-banner");
+const enableAudioButton = document.getElementById("enable-audio");
+const audioStatusElement = document.getElementById("audio-status");
 
 let refreshTimer;
 let lastDisplayedKey = null;
 const speechSupported = "speechSynthesis" in window;
+let audioEnabled = false;
 
 async function refreshDisplay() {
     try {
@@ -109,7 +113,7 @@ function formatTicketNumber(sequence) {
 }
 
 function announceTicket(ticketNumber, counterName) {
-    if (!speechSupported || !ticketNumber || !counterName) {
+    if (!speechSupported || !audioEnabled || !ticketNumber || !counterName) {
         return;
     }
     const sentence = `Nomor antrean ${spellTicket(ticketNumber)} menuju ${counterName}`;
@@ -130,6 +134,7 @@ function spellTicket(ticketNumber) {
 }
 
 window.addEventListener("load", () => {
+    setupAudioControls();
     refreshDisplay();
     refreshTimer = setInterval(refreshDisplay, 4000);
 });
@@ -139,3 +144,34 @@ window.addEventListener("beforeunload", () => {
         clearInterval(refreshTimer);
     }
 });
+
+function setupAudioControls() {
+    if (!speechSupported) {
+        if (audioBannerElement) {
+            audioBannerElement.classList.add("hidden");
+        }
+        audioEnabled = false;
+        return;
+    }
+    if (!enableAudioButton || !audioStatusElement) {
+        audioEnabled = true;
+        return;
+    }
+
+    enableAudioButton.addEventListener("click", () => {
+        try {
+            window.speechSynthesis.resume();
+            const confirmation = new SpeechSynthesisUtterance("Suara pemanggilan aktif.");
+            confirmation.lang = "id-ID";
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(confirmation);
+            audioEnabled = true;
+            enableAudioButton.disabled = true;
+            enableAudioButton.textContent = "Suara Aktif";
+            audioStatusElement.textContent = "Suara pemanggilan aktif. Pastikan volume perangkat hidup.";
+        } catch (error) {
+            console.error("Gagal mengaktifkan suara", error);
+            audioStatusElement.textContent = "Gagal mengaktifkan suara. Periksa pengaturan browser.";
+        }
+    });
+}

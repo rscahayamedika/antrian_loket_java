@@ -91,7 +91,7 @@ public class QueueService {
         Assert.state(firstCounterId != null, "Tidak ada loket terdaftar");
         int nextSequence = ticketSequence.incrementAndGet();
         String ticketNumber = String.format("Q-%03d", nextSequence);
-        Ticket ticket = Ticket.create(ticketNumber);
+    Ticket ticket = Ticket.create(ticketNumber);
         waitingByCounter.get(firstCounterId).addLast(ticket);
         try {
             ticketPrinter.printTicket(ticket);

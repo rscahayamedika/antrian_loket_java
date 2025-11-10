@@ -10,7 +10,10 @@ Aplikasi antrean loket berbasis Java Spring Boot dengan antarmuka web dan dukung
 - Penomoran antrean otomatis direset setiap pukul 00.00 setiap hari.
 - Tampilan web responsif untuk memonitor nomor berjalan dan antrean tersisa.
 - Cetak tiket otomatis berisi nama instansi, nomor antrean, dan alamat pada setiap penerbitan nomor.
+- Tanggal penerbitan tercetak di bagian bawah tiket untuk tanda terima harian.
 - REST API sederhana untuk integrasi lanjutan.
+- Menu pengaturan instansi untuk memperbarui nama dan alamat tanpa mengubah berkas konfigurasi.
+- Tombol aktivasi suara pada display agar browser mengizinkan pemutaran audio pemanggilan.
 
 ## Teknologi
 
@@ -64,6 +67,8 @@ printer:
 ```
 
 Pastikan printer default pada sistem telah terpasang; aplikasi akan melewati pencetakan jika tidak menemukan printer.
+
+Anda juga dapat memperbarui nama instansi dan alamat secara cepat melalui `settings.html` di dashboard utama.
 
 #### Cara Mengoperasikan Klien Desktop
 

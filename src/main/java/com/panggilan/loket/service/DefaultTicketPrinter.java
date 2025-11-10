@@ -19,8 +19,11 @@ import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -28,6 +31,8 @@ import java.util.concurrent.Executors;
 public class DefaultTicketPrinter implements TicketPrinter {
 
     private static final Logger log = LoggerFactory.getLogger(DefaultTicketPrinter.class);
+    private static final DateTimeFormatter DATE_FORMATTER =
+        DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("id", "ID"));
 
     private final TicketPrintProperties properties;
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -112,13 +117,13 @@ public class DefaultTicketPrinter implements TicketPrinter {
 
             int yTop = 10;
             yTop = drawCenteredLines(g2, new Font("SansSerif", Font.BOLD, properties.getHeaderFontSize()),
-                    safeValue(properties.getInstitutionName(), "Instansi Anda"), width, yTop);
+                    safeValue(properties.getInstitutionName(), "RS C"), width, yTop);
 
             drawCenteredTicketNumber(g2, new Font("SansSerif", Font.BOLD, properties.getTicketFontSize()),
                     ticket.getNumber(), width, height);
 
-            drawFooter(g2, new Font("SansSerif", Font.PLAIN, properties.getFooterFontSize()),
-                    safeValue(properties.getAddress(), "Alamat Instansi"), width, height);
+        drawFooter(g2, new Font("SansSerif", Font.PLAIN, properties.getFooterFontSize()),
+            buildFooterText(ticket), width, height);
 
             return PAGE_EXISTS;
         }
@@ -182,6 +187,18 @@ public class DefaultTicketPrinter implements TicketPrinter {
 
         private String safeValue(String value, String fallback) {
             return value == null || value.isBlank() ? fallback : value;
+        }
+
+        private String buildFooterText(Ticket ticket) {
+            String address = safeValue(properties.getAddress(), "Alamat Instansi");
+            LocalDate date = ticket.getDisplayDate() == null ? LocalDate.now() : ticket.getDisplayDate();
+            String formattedDate;
+            try {
+                formattedDate = DATE_FORMATTER.format(date);
+            } catch (Exception ex) {
+                formattedDate = date.toString();
+            }
+            return address + System.lineSeparator() + formattedDate;
         }
     }
 }
