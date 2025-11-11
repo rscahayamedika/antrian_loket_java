@@ -37,6 +37,16 @@ function renderCounters(counters) {
     counterListElement.innerHTML = "";
     counters.forEach(counter => {
         const waitingTickets = Array.isArray(counter.waitingTickets) ? counter.waitingTickets : [];
+        const activeTickets = Array.isArray(counter.activeTickets) ? counter.activeTickets : [];
+        const primaryTicket = activeTickets.length > 0 ? activeTickets[0] : null;
+        const selectMarkup = activeTickets.length === 0
+            ? `<p class="secondary-text">Tidak ada nomor aktif.</p>`
+            : `
+                <label class="active-select-label" for="active-${counter.id}">Pilih Nomor Aktif</label>
+                <select id="active-${counter.id}" data-counter="${counter.id}" class="active-select">
+                    ${activeTickets.map(ticket => `<option value="${ticket.id}">${ticket.number}</option>`).join("")}
+                </select>
+            `;
         const card = document.createElement("article");
         card.className = "counter-card";
         card.innerHTML = `
@@ -46,7 +56,8 @@ function renderCounters(counters) {
             </div>
             <div>
                 <p class="secondary-text">Sedang Dilayani</p>
-                <p class="current-ticket">${counter.currentTicket ? counter.currentTicket.number : "-"}</p>
+                <p class="current-ticket">${primaryTicket ? primaryTicket.number : "-"}</p>
+                ${selectMarkup}
             </div>
             <div class="actions">
                 <button data-action="call" data-counter="${counter.id}">Panggil Selanjutnya</button>
@@ -96,13 +107,24 @@ async function handleCounterAction(event) {
     const action = event.currentTarget.dataset.action;
     const counterId = event.currentTarget.dataset.counter;
     let endpoint;
+    let selectedTicket = null;
 
     if (action === "call") {
         endpoint = `/api/counters/${counterId}/call-next`;
     } else if (action === "recall") {
-        endpoint = `/api/counters/${counterId}/recall`;
+        selectedTicket = getSelectedTicket(counterId);
+        if (!selectedTicket) {
+            showFeedback(`Loket ${counterId} tidak memiliki nomor aktif untuk dipanggil ulang.`, true);
+            return;
+        }
+        endpoint = `/api/counters/${counterId}/recall?ticketId=${encodeURIComponent(selectedTicket.id)}`;
     } else if (action === "complete") {
-        endpoint = `/api/counters/${counterId}/complete`;
+        selectedTicket = getSelectedTicket(counterId);
+        if (!selectedTicket) {
+            showFeedback(`Loket ${counterId} tidak memiliki nomor aktif untuk diselesaikan.`, true);
+            return;
+        }
+        endpoint = `/api/counters/${counterId}/complete?ticketId=${encodeURIComponent(selectedTicket.id)}`;
     } else {
         return;
     }
@@ -127,7 +149,8 @@ async function handleCounterAction(event) {
             throw new Error(message);
         }
         if (action === "complete") {
-            showFeedback(`Loket ${counterId} selesai melayani nomor saat ini.`);
+            const label = selectedTicket ? selectedTicket.label : "saat ini";
+            showFeedback(`Loket ${counterId} selesai melayani nomor ${label}.`);
         } else {
             const ticket = await response.json();
             const verb = action === "recall" ? "Panggilan ulang" : "Memanggil";
@@ -139,6 +162,18 @@ async function handleCounterAction(event) {
     } finally {
         await loadStatus();
     }
+}
+
+function getSelectedTicket(counterId) {
+    const selector = document.querySelector(`select[data-counter="${counterId}"]`);
+    if (!selector || selector.options.length === 0) {
+        return null;
+    }
+    const option = selector.options[selector.selectedIndex];
+    return {
+        id: option.value,
+        label: option.textContent
+    };
 }
 
 function formatTicketNumber(sequence) {

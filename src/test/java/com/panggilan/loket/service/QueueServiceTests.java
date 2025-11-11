@@ -28,7 +28,7 @@ class QueueServiceTests {
         definitionC.setId("C");
         definitionC.setName("Loket C");
         properties.setCounters(List.of(definitionA, definitionB, definitionC));
-    queueService = new QueueService(properties, TicketPrinter.noop());
+        queueService = new QueueService(properties, TicketPrinter.noop());
         queueService.initializeCounters();
     }
 
@@ -63,6 +63,10 @@ class QueueServiceTests {
     @Test
     void callNextWhileBusyShouldThrow() {
         queueService.issueTicket();
+        queueService.issueTicket();
+        queueService.issueTicket();
+
+        queueService.callNext("A").orElseThrow();
         queueService.callNext("A").orElseThrow();
 
         assertThatThrownBy(() -> queueService.callNext("A"))
@@ -72,11 +76,34 @@ class QueueServiceTests {
     @Test
     void recallShouldReturnCurrentTicket() {
         queueService.issueTicket();
-        Ticket assigned = queueService.callNext("A").orElseThrow();
+        queueService.issueTicket();
+
+        queueService.callNext("A").orElseThrow();
+        Ticket second = queueService.callNext("A").orElseThrow();
 
         Ticket recall = queueService.recall("A").orElseThrow();
 
-        assertThat(recall.getId()).isEqualTo(assigned.getId());
+        assertThat(recall.getId()).isEqualTo(second.getId());
+    }
+
+    @Test
+    void completeRemovesOldestActiveTicketFirst() {
+        queueService.issueTicket();
+        queueService.issueTicket();
+        queueService.issueTicket();
+
+        Ticket first = queueService.callNext("A").orElseThrow();
+        Ticket second = queueService.callNext("A").orElseThrow();
+
+        queueService.complete("A");
+
+        Ticket atB = queueService.callNext("B").orElseThrow();
+        assertThat(atB.getId()).isEqualTo(first.getId());
+
+        queueService.complete("B");
+
+        Ticket remainingAtA = queueService.recall("A").orElseThrow();
+        assertThat(remainingAtA.getId()).isEqualTo(second.getId());
     }
 
     @Test

@@ -8,7 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -91,7 +94,7 @@ public class QueueService {
         Assert.state(firstCounterId != null, "Tidak ada loket terdaftar");
         int nextSequence = ticketSequence.incrementAndGet();
         String ticketNumber = String.format("Q-%03d", nextSequence);
-    Ticket ticket = Ticket.create(ticketNumber);
+        Ticket ticket = Ticket.create(ticketNumber);
         waitingByCounter.get(firstCounterId).addLast(ticket);
         try {
             ticketPrinter.printTicket(ticket);
@@ -104,9 +107,9 @@ public class QueueService {
     public synchronized Optional<Ticket> callNext(String counterId) {
         ensureDailyResetIfNeeded();
         CounterState counter = requireCounter(counterId);
-        if (counter.current != null) {
-            throw new IllegalStateException(
-                    "Loket " + counterId + " masih melayani nomor " + counter.current.getNumber());
+        if (counter.activeSize() >= 2) {
+            throw new IllegalStateException("Loket " + counterId
+                    + " sudah memanggil dua nomor. Selesaikan salah satu terlebih dahulu.");
         }
         Deque<Ticket> queue = waitingByCounter.get(counterId);
         if (queue == null) {
@@ -117,7 +120,7 @@ public class QueueService {
             return Optional.empty();
         }
         Ticket assigned = ticket.assignToCounter(counter.id, counter.name);
-        counter.current = assigned;
+        counter.addActive(assigned);
         counter.lastCalledAt = LocalDateTime.now();
         return Optional.of(assigned);
     }
@@ -132,23 +135,36 @@ public class QueueService {
     }
 
     public Optional<Ticket> recall(String counterId) {
+        return recall(counterId, null);
+    }
+
+    public Optional<Ticket> recall(String counterId, String ticketId) {
         ensureDailyResetIfNeeded();
         CounterState counter = requireCounter(counterId);
-        Ticket current = counter.current;
-        if (current != null) {
+        Ticket target = counter.realignActiveTicket(ticketId);
+        if (target == null && ticketId != null && !ticketId.isBlank()) {
+            throw new IllegalArgumentException("Nomor " + ticketId + " tidak aktif di loket " + counterId);
+        }
+        if (target != null) {
             counter.lastCalledAt = LocalDateTime.now();
         }
-        return Optional.ofNullable(current);
+        return Optional.ofNullable(target);
     }
 
     public synchronized void complete(String counterId) {
+        complete(counterId, null);
+    }
+
+    public synchronized void complete(String counterId, String ticketId) {
         ensureDailyResetIfNeeded();
         CounterState counter = requireCounter(counterId);
-        Ticket current = counter.current;
+        Ticket current = counter.removeActive(ticketId);
+        if (current == null && ticketId != null && !ticketId.isBlank()) {
+            throw new IllegalArgumentException("Nomor " + ticketId + " tidak aktif di loket " + counterId);
+        }
         if (current == null) {
             return;
         }
-        counter.current = null;
         String nextCounterId = nextCounterId(counterId);
         if (nextCounterId != null) {
             waitingByCounter.get(nextCounterId).addLast(current.resetCounter());
@@ -190,7 +206,7 @@ public class QueueService {
             ticketSequence.set(0);
             waitingByCounter.values().forEach(Deque::clear);
             counters.values().forEach(state -> {
-                state.current = null;
+                state.clearActive();
                 state.lastCalledAt = null;
             });
             lastResetDate = today;
@@ -239,7 +255,6 @@ public class QueueService {
     private static final class CounterState {
         private final String id;
         private volatile String name;
-        private volatile Ticket current;
         private volatile LocalDateTime lastCalledAt;
 
         private CounterState(String id, String name) {
@@ -248,7 +263,59 @@ public class QueueService {
         }
 
         private CounterSnapshot snapshot(List<Ticket> waitingQueue, int nextNumber) {
-            return new CounterSnapshot(id, name, current, waitingQueue, nextNumber, lastCalledAt);
+            List<Ticket> actives = new ArrayList<>(activeTickets);
+            return new CounterSnapshot(id, name, actives, waitingQueue, nextNumber, lastCalledAt);
+        }
+
+        private final Deque<Ticket> activeTickets = new ArrayDeque<>();
+        private void addActive(Ticket ticket) {
+            activeTickets.addLast(ticket);
+        }
+
+        private int activeSize() {
+            return activeTickets.size();
+        }
+
+        private void clearActive() {
+            activeTickets.clear();
+        }
+
+        private Ticket realignActiveTicket(String ticketId) {
+            if (ticketId == null || ticketId.isBlank()) {
+                return activeTickets.peekLast();
+            }
+            if (activeTickets.isEmpty()) {
+                return null;
+            }
+            Ticket found = null;
+            List<Ticket> snapshot = new ArrayList<>(activeTickets);
+            activeTickets.clear();
+            for (Ticket ticket : snapshot) {
+                if (found == null && ticketId.equals(ticket.getId())) {
+                    found = ticket;
+                    continue;
+                }
+                activeTickets.addLast(ticket);
+            }
+            if (found != null) {
+                activeTickets.addLast(found);
+            }
+            return found;
+        }
+
+        private Ticket removeActive(String ticketId) {
+            if (ticketId == null || ticketId.isBlank()) {
+                return activeTickets.pollFirst();
+            }
+            Iterator<Ticket> iterator = activeTickets.iterator();
+            while (iterator.hasNext()) {
+                Ticket ticket = iterator.next();
+                if (ticketId.equals(ticket.getId())) {
+                    iterator.remove();
+                    return ticket;
+                }
+            }
+            return null;
         }
     }
 }

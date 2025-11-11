@@ -3,7 +3,9 @@ package com.panggilan.desktop;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -19,10 +21,12 @@ import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.nio.charset.StandardCharsets;
 
 public final class CounterCallerApp {
 
@@ -40,6 +44,8 @@ public final class CounterCallerApp {
     private JTextField counterField;
     private JLabel currentTicketLabel;
     private JLabel statusMessage;
+    private JComboBox<TicketOption> activeTicketCombo;
+    private DefaultComboBoxModel<TicketOption> activeTicketsModel;
 
     private CounterCallerApp(String presetServer, String presetCounter) {
         this.presetServer = presetServer == null || presetServer.isBlank() ? "http://localhost:8080" : presetServer;
@@ -49,26 +55,31 @@ public final class CounterCallerApp {
     private void initUi() {
         frame = new JFrame("Panggilan Loket Desktop");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(420, 260);
+        frame.setSize(460, 320);
         frame.setLocationRelativeTo(null);
 
         JPanel formPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JLabel serverLabel = new JLabel("Server URL");
-    serverField = new JTextField(presetServer, 22);
+        serverField = new JTextField(presetServer, 22);
         JLabel counterLabel = new JLabel("ID Loket");
-    counterField = new JTextField(presetCounter, 10);
+        counterField = new JTextField(presetCounter, 10);
+        JLabel activeLabel = new JLabel("Nomor Aktif");
+        activeTicketsModel = new DefaultComboBoxModel<>();
+        activeTicketCombo = new JComboBox<>(activeTicketsModel);
+        activeTicketCombo.setEnabled(false);
 
         JButton callNextButton = new JButton("Panggil Berikutnya");
         JButton recallButton = new JButton("Panggil Ulang");
         JButton completeButton = new JButton("Selesaikan");
 
-    currentTicketLabel = new JLabel("Nomor Saat Ini: -");
-    currentTicketLabel.setHorizontalAlignment(JLabel.CENTER);
-    currentTicketLabel.setFont(currentTicketLabel.getFont().deriveFont(Font.BOLD, 24f));
+        currentTicketLabel = new JLabel("Nomor Saat Ini: -");
+        currentTicketLabel.setHorizontalAlignment(JLabel.CENTER);
+        currentTicketLabel.setFont(currentTicketLabel.getFont().deriveFont(Font.BOLD, 24f));
         statusMessage = new JLabel(" ");
 
         gbc.gridx = 0;
@@ -85,12 +96,18 @@ public final class CounterCallerApp {
 
         gbc.gridx = 0;
         gbc.gridy = 2;
+        formPanel.add(activeLabel, gbc);
+        gbc.gridx = 1;
+        formPanel.add(activeTicketCombo, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
         formPanel.add(callNextButton, gbc);
         gbc.gridx = 1;
         formPanel.add(recallButton, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         formPanel.add(completeButton, gbc);
 
         frame.add(formPanel, BorderLayout.CENTER);
@@ -113,31 +130,40 @@ public final class CounterCallerApp {
                 String number = response.path("number").asText("-");
                 currentTicketLabel.setText("Nomor Saat Ini: " + number);
                 setStatus("Memanggil nomor " + number, false);
+                refreshCurrentStatus();
             }
         });
     }
 
     private void recallAction(ActionEvent event) {
         withLoading(() -> {
-            JsonNode response = post(String.format("/api/counters/%s/recall", counterField.getText().trim()));
+            TicketOption selected = getSelectedTicket();
+            if (selected == null) {
+                setStatus("Pilih nomor aktif terlebih dahulu.", true);
+                return;
+            }
+            JsonNode response = post(String.format("/api/counters/%s/recall?ticketId=%s",
+                    counterField.getText().trim(), encode(selected.id())));
             if (response != null) {
                 String number = response.path("number").asText("-");
                 currentTicketLabel.setText("Nomor Saat Ini: " + number);
                 setStatus("Panggilan ulang nomor " + number, false);
+                refreshCurrentStatus();
             }
         });
     }
 
     private void completeAction(ActionEvent event) {
         withLoading(() -> {
-            JsonNode response = post(String.format("/api/counters/%s/complete", counterField.getText().trim()));
-            if (response != null) {
-                setStatus(response.path("message").asText("Loket siap untuk nomor berikutnya."), false);
-                refreshCurrentStatus();
-            } else {
-                setStatus("Loket siap untuk nomor berikutnya.", false);
-                refreshCurrentStatus();
+            TicketOption selected = getSelectedTicket();
+            if (selected == null) {
+                setStatus("Tidak ada nomor aktif untuk diselesaikan.", true);
+                return;
             }
+            post(String.format("/api/counters/%s/complete?ticketId=%s",
+                    counterField.getText().trim(), encode(selected.id())));
+            setStatus("Selesai melayani nomor " + selected.label() + ".", false);
+            refreshCurrentStatus();
         });
     }
 
@@ -151,14 +177,62 @@ public final class CounterCallerApp {
             if (counters != null && counters.isArray()) {
                 for (JsonNode counter : counters) {
                     if (counterId.equalsIgnoreCase(counter.path("id").asText())) {
-                        String number = counter.path("currentTicket").path("number").asText("-");
-                        currentTicketLabel.setText("Nomor Saat Ini: " + number);
+                        updateCurrentTicketLabel(counter);
+                        updateActiveSelector(counter);
                         break;
                     }
                 }
             }
         } catch (Exception ex) {
             setStatus("Gagal memuat status: " + ex.getMessage(), true);
+        }
+    }
+
+    private void updateCurrentTicketLabel(JsonNode counterNode) {
+        if (counterNode == null || counterNode.isMissingNode()) {
+            currentTicketLabel.setText("Nomor Saat Ini: -");
+            return;
+        }
+        JsonNode active = counterNode.path("activeTickets");
+        if (active.isArray() && active.size() > 0) {
+            StringBuilder builder = new StringBuilder(active.get(0).path("number").asText("-"));
+            if (active.size() > 1) {
+                builder.append(" | ");
+                for (int i = 1; i < active.size(); i++) {
+                    if (i > 1) {
+                        builder.append(", ");
+                    }
+                    builder.append(active.get(i).path("number").asText("-"));
+                }
+            }
+            currentTicketLabel.setText("Nomor Saat Ini: " + builder);
+            return;
+        }
+        String number = counterNode.path("currentTicket").path("number").asText("-");
+        currentTicketLabel.setText("Nomor Saat Ini: " + number);
+    }
+
+    private void updateActiveSelector(JsonNode counterNode) {
+        if (activeTicketsModel == null || activeTicketCombo == null) {
+            return;
+        }
+        activeTicketsModel.removeAllElements();
+        JsonNode active = counterNode.path("activeTickets");
+        if (active.isArray()) {
+            for (JsonNode node : active) {
+                String id = node.path("id").asText();
+                String number = node.path("number").asText("-");
+                if (id != null && !id.isBlank()) {
+                    activeTicketsModel.addElement(new TicketOption(id, number));
+                }
+            }
+        }
+        boolean hasActive = activeTicketsModel.getSize() > 0;
+        activeTicketCombo.setEnabled(hasActive);
+        if (hasActive) {
+            activeTicketCombo.setSelectedIndex(0);
+        } else {
+            activeTicketCombo.setSelectedItem(null);
         }
     }
 
@@ -230,6 +304,17 @@ public final class CounterCallerApp {
         statusMessage.setForeground(isError ? java.awt.Color.RED : java.awt.Color.DARK_GRAY);
     }
 
+    private TicketOption getSelectedTicket() {
+        if (activeTicketCombo == null || activeTicketsModel == null || activeTicketsModel.getSize() == 0) {
+            return null;
+        }
+        return (TicketOption) activeTicketCombo.getSelectedItem();
+    }
+
+    private static String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
     public static void main(String[] args) {
         String argServer = extractOption(args, "--server=");
         String argCounter = extractOption(args, "--counter=");
@@ -267,5 +352,28 @@ public final class CounterCallerApp {
             }
         }
         return "";
+    }
+
+    private static final class TicketOption {
+        private final String id;
+        private final String label;
+
+        private TicketOption(String id, String label) {
+            this.id = id;
+            this.label = label;
+        }
+
+        private String id() {
+            return id;
+        }
+
+        private String label() {
+            return label;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
     }
 }

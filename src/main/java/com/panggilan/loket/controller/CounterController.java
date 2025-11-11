@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
@@ -76,9 +77,10 @@ public class CounterController {
     }
 
     @PostMapping("/counters/{counterId}/recall")
-    public ResponseEntity<?> recall(@PathVariable String counterId) {
+    public ResponseEntity<?> recall(@PathVariable String counterId,
+                                    @RequestParam(value = "ticketId", required = false) String ticketId) {
         try {
-            return queueService.recall(counterId)
+            return queueService.recall(counterId, ticketId)
                     .map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.noContent().build());
         } catch (IllegalArgumentException ex) {
@@ -88,9 +90,10 @@ public class CounterController {
     }
 
     @PostMapping("/counters/{counterId}/complete")
-    public ResponseEntity<?> complete(@PathVariable String counterId) {
+    public ResponseEntity<?> complete(@PathVariable String counterId,
+                                      @RequestParam(value = "ticketId", required = false) String ticketId) {
         try {
-            queueService.complete(counterId);
+            queueService.complete(counterId, ticketId);
             return ResponseEntity.accepted().build();
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

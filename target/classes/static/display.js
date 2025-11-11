@@ -41,11 +41,15 @@ async function refreshDisplay() {
 function renderCounters(counters) {
     countersElement.innerHTML = "";
     counters.forEach(counter => {
+        const activeTickets = Array.isArray(counter.activeTickets) ? counter.activeTickets : [];
+        const activeText = activeTickets.length === 0
+            ? "-"
+            : activeTickets.map(ticket => ticket.number).join(", ");
         const card = document.createElement("div");
         card.className = "display-counter-card";
         card.innerHTML = `
             <h3>${counter.name}</h3>
-            <p class="display-ticket">${counter.currentTicket ? counter.currentTicket.number : "-"}</p>
+            <p class="display-ticket">${activeText}</p>
         `;
         countersElement.appendChild(card);
     });
@@ -82,9 +86,11 @@ function updateLastCall(counters) {
         }
         const calledAt = new Date(counter.lastCalledAt);
         if (!latest || calledAt > latest.calledAt) {
+            const activeTickets = Array.isArray(counter.activeTickets) ? counter.activeTickets : [];
+            const lastTicket = activeTickets.length === 0 ? counter.currentTicket : activeTickets[activeTickets.length - 1];
             latest = {
-                key: `${counter.currentTicket.id}:${counter.id}:${counter.lastCalledAt}`,
-                number: counter.currentTicket.number,
+                key: `${lastTicket.id}:${counter.id}:${counter.lastCalledAt}`,
+                number: lastTicket.number,
                 counterName: counter.name,
                 calledAt
             };
