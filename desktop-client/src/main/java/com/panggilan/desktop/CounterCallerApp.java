@@ -14,6 +14,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -77,6 +78,10 @@ public final class CounterCallerApp {
         JButton recallButton = new JButton("Panggil Ulang");
         JButton completeButton = new JButton("Selesaikan");
     JButton stopButton = new JButton("Stop");
+    stopButton.setBackground(new Color(0xC0392B));
+    stopButton.setForeground(Color.WHITE);
+    stopButton.setOpaque(true);
+    stopButton.setBorderPainted(false);
 
         currentTicketLabel = new JLabel("Nomor Saat Ini: -");
         currentTicketLabel.setHorizontalAlignment(JLabel.CENTER);
@@ -110,8 +115,8 @@ public final class CounterCallerApp {
         gbc.gridx = 0;
         gbc.gridy = 4;
         formPanel.add(completeButton, gbc);
-    gbc.gridx = 1;
-    formPanel.add(stopButton, gbc);
+        gbc.gridx = 1;
+        formPanel.add(stopButton, gbc);
 
         frame.add(formPanel, BorderLayout.CENTER);
         frame.add(currentTicketLabel, BorderLayout.NORTH);
@@ -120,7 +125,7 @@ public final class CounterCallerApp {
         callNextButton.addActionListener(this::callNextAction);
         recallButton.addActionListener(this::recallAction);
         completeButton.addActionListener(this::completeAction);
-    stopButton.addActionListener(this::stopAction);
+        stopButton.addActionListener(this::stopAction);
 
         Timer refreshTimer = new Timer(4000, e -> SwingUtilities.invokeLater(this::refreshCurrentStatus));
         refreshTimer.setInitialDelay(0);
@@ -172,6 +177,15 @@ public final class CounterCallerApp {
     }
 
     private void stopAction(ActionEvent event) {
+    int choice = JOptionPane.showConfirmDialog(
+        frame,
+        "apakah anda yakin akan stop antrian?",
+        "Konfirmasi Stop",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
         withLoading(() -> {
             TicketOption selected = getSelectedTicket();
             if (selected == null) {
