@@ -109,6 +109,23 @@ class QueueServiceTests {
     }
 
     @Test
+    void stopShouldRemoveTicketWithoutForwarding() {
+        queueService.issueTicket();
+        queueService.issueTicket();
+
+        Ticket first = queueService.callNext("A").orElseThrow();
+        Ticket second = queueService.callNext("A").orElseThrow();
+
+        Ticket stopped = queueService.stop("A", first.getId()).orElseThrow();
+        assertThat(stopped.getId()).isEqualTo(first.getId());
+
+        assertThat(queueService.callNext("B")).isEmpty();
+
+        Ticket remaining = queueService.recall("A").orElseThrow();
+        assertThat(remaining.getId()).isEqualTo(second.getId());
+    }
+
+    @Test
     void ticketSequenceResetsAtMidnight() throws Exception {
         queueService.issueTicket();
         queueService.issueTicket();

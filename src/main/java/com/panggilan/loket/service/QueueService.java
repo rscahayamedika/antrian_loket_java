@@ -107,9 +107,9 @@ public class QueueService {
     public synchronized Optional<Ticket> callNext(String counterId) {
         ensureDailyResetIfNeeded();
         CounterState counter = requireCounter(counterId);
-    if (counter.activeSize() >= 3) {
-        throw new IllegalStateException("Loket " + counterId
-            + " sudah memanggil tiga nomor. Selesaikan salah satunya terlebih dahulu.");
+        if (counter.activeSize() >= 3) {
+            throw new IllegalStateException("Loket " + counterId
+                    + " sudah memanggil tiga nomor. Selesaikan salah satunya terlebih dahulu.");
         }
         Deque<Ticket> queue = waitingByCounter.get(counterId);
         if (queue == null) {
@@ -170,6 +170,24 @@ public class QueueService {
         if (nextCounterId != null) {
             waitingByCounter.get(nextCounterId).addLast(current.resetCounter());
         }
+    }
+
+    public Optional<Ticket> stop(String counterId) {
+        return stop(counterId, null);
+    }
+
+    public synchronized Optional<Ticket> stop(String counterId, String ticketId) {
+        ensureDailyResetIfNeeded();
+        CounterState counter = requireCounter(counterId);
+        Ticket removed = counter.removeActive(ticketId);
+        if (removed == null && ticketId != null && !ticketId.isBlank()) {
+            throw new IllegalArgumentException("Nomor " + ticketId + " tidak aktif di loket " + counterId);
+        }
+        if (removed == null) {
+            return Optional.empty();
+        }
+        counter.clearLastCalledIfMatches(removed);
+        return Optional.of(removed);
     }
 
     public List<Ticket> getWaitingQueue() {

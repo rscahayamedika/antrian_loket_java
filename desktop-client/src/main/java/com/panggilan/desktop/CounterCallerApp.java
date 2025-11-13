@@ -76,6 +76,7 @@ public final class CounterCallerApp {
         JButton callNextButton = new JButton("Panggil Berikutnya");
         JButton recallButton = new JButton("Panggil Ulang");
         JButton completeButton = new JButton("Selesaikan");
+    JButton stopButton = new JButton("Stop");
 
         currentTicketLabel = new JLabel("Nomor Saat Ini: -");
         currentTicketLabel.setHorizontalAlignment(JLabel.CENTER);
@@ -109,6 +110,8 @@ public final class CounterCallerApp {
         gbc.gridx = 0;
         gbc.gridy = 4;
         formPanel.add(completeButton, gbc);
+    gbc.gridx = 1;
+    formPanel.add(stopButton, gbc);
 
         frame.add(formPanel, BorderLayout.CENTER);
         frame.add(currentTicketLabel, BorderLayout.NORTH);
@@ -117,6 +120,7 @@ public final class CounterCallerApp {
         callNextButton.addActionListener(this::callNextAction);
         recallButton.addActionListener(this::recallAction);
         completeButton.addActionListener(this::completeAction);
+    stopButton.addActionListener(this::stopAction);
 
         Timer refreshTimer = new Timer(4000, e -> SwingUtilities.invokeLater(this::refreshCurrentStatus));
         refreshTimer.setInitialDelay(0);
@@ -163,6 +167,24 @@ public final class CounterCallerApp {
             post(String.format("/api/counters/%s/complete?ticketId=%s",
                     counterField.getText().trim(), encode(selected.id())));
             setStatus("Selesai melayani nomor " + selected.label() + ".", false);
+            refreshCurrentStatus();
+        });
+    }
+
+    private void stopAction(ActionEvent event) {
+        withLoading(() -> {
+            TicketOption selected = getSelectedTicket();
+            if (selected == null) {
+                setStatus("Tidak ada nomor aktif untuk dihentikan.", true);
+                return;
+            }
+            JsonNode response = post(String.format("/api/counters/%s/stop?ticketId=%s",
+                    counterField.getText().trim(), encode(selected.id())));
+            String number = selected.label();
+            if (response != null) {
+                number = response.path("number").asText(number);
+            }
+            setStatus("Nomor " + number + " dihentikan dan tidak dilanjutkan.", false);
             refreshCurrentStatus();
         });
     }

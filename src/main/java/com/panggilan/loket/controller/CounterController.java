@@ -101,6 +101,19 @@ public class CounterController {
         }
     }
 
+    @PostMapping("/counters/{counterId}/stop")
+    public ResponseEntity<?> stop(@PathVariable String counterId,
+                                  @RequestParam(value = "ticketId", required = false) String ticketId) {
+        try {
+            return queueService.stop(counterId, ticketId)
+                    .map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.noContent().build());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", ex.getMessage()));
+        }
+    }
+
     @GetMapping("/queue/status")
     public QueueStatus queueStatus() {
         return queueService.getQueueStatus();

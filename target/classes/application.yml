@@ -14,5 +14,5 @@ queue:
 printer:
   ticket:
     enabled: true
-    institution-name: "Nama Instansi"
-    address: "Jalan Contoh No. 123, Kota"
+    institution-name: "RS CAHAYA MEDIKA"
+    address: "jl. Gajah Mada, Kel. Leneng, Praya, Loteng"

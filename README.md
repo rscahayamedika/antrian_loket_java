@@ -16,6 +16,7 @@ Aplikasi antrean loket berbasis Java Spring Boot dengan antarmuka web dan dukung
 - Tombol aktivasi suara pada display agar browser mengizinkan pemutaran audio pemanggilan.
 - Setiap loket dapat menampung tiga nomor aktif sekaligus; panggilan keempat memerlukan penyelesaian salah satu nomor sebelumnya.
 - Operator dapat memilih nomor aktif mana yang akan dipanggil ulang atau diselesaikan baik dari dashboard web maupun aplikasi desktop.
+- Tiket dapat dihentikan (stop) dari loket sehingga tidak diteruskan ke loket berikutnya.
 
 ## Teknologi
 
@@ -53,7 +54,7 @@ Setiap loket dapat menggunakan aplikasi desktop ringan untuk melakukan panggilan
    java -jar desktop-client/target/counter-desktop-client-0.1.0-SNAPSHOT-jar-with-dependencies.jar
    ```
 
-3. Masukkan URL server (`http://alamat-server:8080`) dan ID loket pada form aplikasi, pilih nomor aktif melalui dropdown, kemudian gunakan tombol **Panggil Berikutnya**, **Panggil Ulang**, dan **Selesaikan** sesuai operasional loket.
+3. Masukkan URL server (`http://alamat-server:8080`) dan ID loket pada form aplikasi, pilih nomor aktif melalui dropdown, kemudian gunakan tombol **Panggil Berikutnya**, **Panggil Ulang**, **Selesaikan**, atau **Stop** sesuai operasional loket.
 4. Pengguna Windows dapat menjalankan `run-desktop-client.bat` untuk meluncurkan aplikasi dengan wizard input URL dan ID loket.
 
 ### Konfigurasi Cetak Tiket
@@ -78,6 +79,7 @@ Anda juga dapat memperbarui nama instansi dan alamat secara cepat melalui `setti
 - **Panggil Berikutnya**: mengambil nomor antrean siap untuk loket tersebut. Jika belum ada nomor yang menunggu, tombol akan nonaktif otomatis.
 - **Panggil Ulang**: pilih nomor aktif pada dropdown lalu putar ulang untuk memastikan pemanggilan terdengar jelas di area tunggu.
 - **Selesaikan**: pilih nomor aktif pada dropdown lalu tandai selesai agar nomor berpindah ke loket berikutnya (atau selesai sepenuhnya bila loket terakhir).
+- **Stop**: pilih nomor aktif lalu hentikan tanpa meneruskan ke loket berikutnya.
 - **Pembaruan Status**: panel status di bagian kiri menampilkan nomor aktif dan estimasi antrean; data diperbarui otomatis setiap beberapa detik.
 - **Gangguan Koneksi**: jika koneksi backend terputus, aplikasi menampilkan peringatan; periksa jaringan dan tekan kembali tombol sesuai kebutuhan setelah koneksi normal.
 
@@ -92,6 +94,7 @@ Anda juga dapat memperbarui nama instansi dan alamat secara cepat melalui `setti
 | POST   | `/api/counters/{id}/call-next`        | Panggil nomor siap untuk loket tertentu. |
 | POST   | `/api/counters/{id}/recall`           | Panggil ulang nomor aktif tertentu (`ticketId` opsional). |
 | POST   | `/api/counters/{id}/complete`         | Selesaikan layanan aktif tertentu (`ticketId` opsional). |
+| POST   | `/api/counters/{id}/stop`             | Hentikan nomor aktif tertentu tanpa meneruskan (`ticketId` opsional). |
 | GET    | `/api/queue/status`                   | Status antrean loket pertama.    |
 
 ## Testing
