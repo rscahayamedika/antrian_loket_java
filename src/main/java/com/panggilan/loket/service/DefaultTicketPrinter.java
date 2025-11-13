@@ -16,6 +16,7 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
 import java.awt.print.PageFormat;
+import java.awt.print.Paper;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
@@ -33,6 +34,7 @@ public class DefaultTicketPrinter implements TicketPrinter {
     private static final Logger log = LoggerFactory.getLogger(DefaultTicketPrinter.class);
     private static final DateTimeFormatter DATE_FORMATTER =
         DateTimeFormatter.ofPattern("dd MMMM yyyy", new Locale("id", "ID"));
+    private static final double CM_TO_POINTS = 72d / 2.54d;
 
     private final TicketPrintProperties properties;
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
@@ -85,12 +87,29 @@ public class DefaultTicketPrinter implements TicketPrinter {
             log.error("Gagal mengikat printer default untuk tiket {}", ticket.getNumber(), ex);
             return;
         }
-        job.setPrintable(new TicketPrintable(ticket));
+        PageFormat pageFormat = configurePageFormat(job);
+        job.setPrintable(new TicketPrintable(ticket), pageFormat);
         try {
             job.print();
         } catch (PrinterException ex) {
             log.error("Gagal mencetak tiket {}", ticket.getNumber(), ex);
         }
+    }
+
+    private PageFormat configurePageFormat(PrinterJob job) {
+        PageFormat format = job.defaultPage();
+        Paper paper = format.getPaper();
+        double width = cmToPoints(7.8);
+        double height = cmToPoints(10.0);
+        paper.setSize(width, height);
+        paper.setImageableArea(0, 0, width, height);
+        format.setOrientation(PageFormat.PORTRAIT);
+        format.setPaper(paper);
+        return format;
+    }
+
+    private double cmToPoints(double valueInCm) {
+        return valueInCm * CM_TO_POINTS;
     }
 
     private final class TicketPrintable implements Printable {
