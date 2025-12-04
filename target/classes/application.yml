@@ -3,7 +3,7 @@ spring:
     name: panggilan-loket
   datasource:
     url: ${DB_URL:jdbc:mysql://172.16.1.27:3306/sik3?useSSL=false&serverTimezone=Asia/Makassar}
-    username: ${DB_USERNAME:yanekaputra}
+    username: ${DB_USERNAME:yaneka}
     password: ${DB_PASSWORD:lopakun}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
